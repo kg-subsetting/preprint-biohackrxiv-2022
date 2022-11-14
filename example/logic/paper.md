@@ -7,9 +7,10 @@ tags:
   - Knowledge graphs
 authors:
   - name: Jose Emilio Labra Gayo
-    orcid: 0000-0002-8021-9162
+    orcid: 0000-0001-8907-5348
     affiliation: 1
   - name: Carolina González-Cavazos
+    orcid: 0000-0001-9615-7157
     affiliation: 2
   - name: Seyed Amir Hosseini Beghaeiraveri
     orcid: 0000-0002-9123-5686
@@ -21,6 +22,7 @@ authors:
     orcid: 0000-0002-8021-9162
     affiliation: 5
   - name: Sabah Ul-Hasan
+    orcid: 0000-0001-6334-452X
     affiliation: 2
   - name: Egon Willighagen
     orcid: 0000-0001-7542-0286
@@ -114,7 +116,7 @@ This requires a different implementation. WDSub now feeds on the daily dumps of 
 The biohackathon assisted in an evaluation of existing nodes and edges on drug-target interactions categories within Wikidata. We built machine readable schemas of drug-target interactions in Wikidata for future data reuse ([link](https://github.com/kg-subsetting/biohackathon2022/blob/main/examples/ShEx/geneWiki.shex)).
 
 ### 4 Creating LIPID MAPS Wikidata subset
-During the BioHackathon, one of the use cases formulated to experiment with subsetting was about lipid chemical compounds.
+During the BioHackathon, one of the use cases formulated to experiment with subsetting was about lipid chemical compounds. LIPID MAPS is a project curating knowledge about lipids and WikiPathways captures knowledge about biological processes. Complementing the information from this curation project with knowledge from Wikidata defines a unique new knowledge graph to support lipidomics research, e.g. in EpiLipidNET.
 
 ### 5 Uploading subsets to local SPARQL endpoint
 The gene and disease subsets are turtle (RDF) files, which can be stored in any SPARQL endpoint. We have install GraphDB from Ontotext locally to load the generated gene and disease subsets.  
@@ -192,3 +194,335 @@ The query can [be run online](https://bit.ly/3A5L3o1) and some results:
 ## References 
 
 
+## Appendix 
+### BioHackathon Notes
+
+In this section we include a report of the daily meetings and discussions that took place during the biohackathon:
+
+### First day: 7th-Nov-2022
+
+- Andra: plan for the week
+    - Expectations
+        - Finish the paper that we started last year
+        - Create subsets for GeneWiki
+        - What to do with the subset
+            - Issue to solve: Where to store the created subset
+                - [Dryad](https://datadryad.org/stash)
+        - Seyed same expectations
+        - Expressivity of wdsub is constrained by sequential processing for each line...it checks each item 
+
+Gameplan
+* Andra: Revisit the wdsubset of genewiki subgraph
+    * This involves support for qualifiers and references
+
+
+Example of things supported in wdsub:
+
+```
+start = @<Gene> OR @<Disease> OR ...
+
+<Gene> EXTRA wdt:P31 {
+  wdt:P31   [ wd:Q7187 ....] ;
+  # Don't follow this pattern: wdt:P31 . * ;
+  wdt:P703  
+  
+  # References are supported but not validated
+  :encodes  @<Protein> ;
+  
+  # Qualifiers...
+  p:P166 { 
+    ps:P166  @<Award>         ;
+    pq:P585  xsd:dateTime   ? ; 
+    pq:P1706 @<Researcher>  *
+  } *
+
+}
+
+<Disiease> {
+
+}
+
+<Protein> { 
+  wdt:p31 [....]
+}
+```
+
+
+
+```
+start = @<Gene_by_ontology> OR @<Gene_by_identifier>
+
+<Gene_by_ontology> {
+    p:P31 {
+       ps:P31 [wd:Q7187] ;
+       prov:wasDerivedFrom . ;
+    }
+    
+    p:P703 {
+        ps:P703 [wd:homo sapiens] ;
+        prov:wasDerivedFrom . ;
+     
+    }
+}
+
+<Gene_by_identifier> {
+    p:
+}
+```
+
+
+
+Seyed's question: What is the difference between these (in terms of extracting subset via WDSub)?:
+1)
+```
+start = @<Gene> OR @<Disease> OR <Protein>
+
+<Gene> EXTRA wdt:P31 {
+  wdt:P31   [ wd:Q7187] ;
+}
+
+<Disiease> {
+    wdt:p31 [wd:Qabc]
+}
+
+<Protein> { 
+  wdt:p31 [wd:Qijk]
+}
+```
+and 2)
+```
+start = @<all>
+
+<all> EXTRA wdt:P31 {
+  wdt:P31   [ wd:Q7187, wd:Qabc, wd:Qijk] ;
+}
+
+```
+
+- Andra: will work on preparing some examples about GeneWiki
+- Seyed: Check if the tool finnished and review the output of wdsub.
+    - Report about the possible turtle output
+- Carolina has some Shape Expressions about GeneWiki (add more properties)
+- Labra will continue checking the tool and update docker image
+
+```
+run dump -s schema.shex --schemaFormat ShExC -o target/exampleReferences.ttl.gz input.json.gz --dumpMode OnlyMatched --dumpFormat Turtle
+```
+- During the break I met Egon and were talking about possibility of creating a subset about Chemistry
+- Idea: prepare a tutorial to explain how to create subsets using wdsub
+
+
+### Second day: 8th-Nov-2022
+
+- Seyed: created a subset which contains instances of Genes, Proteins, etc. and put the output (turtle) in a Blazegraph 
+    - Dumps from: 3 January 2022 [Link]( https://academictorrents.com/details/229cfeb2331ad43d4706efd435f6d78f40a3c438)
+    - SPARQL counting: 
+        - Gene: 1196517
+        - Protein: 987614
+        - Chemical compound: 1244866
+        - Disease: 5512
+- Andra [created an example](https://github.com/kg-subsetting/biohackathon2022/blob/main/examples/ShEx/gene.shex) of a ShEx to extract info related with Genes but that is more inclusive than just checking the P31 Q7187, including all things that have at least some specific properties...
+
+```
+<Gene> @<TypedGene> OR @<PropertyBasedGene>
+
+<TypedGene> EXTRA p:P31 {
+  p:P31 { ps:P31 [wd:Q7187]} 
+}
+
+<PropertyBasedGene> 
+  { p:P351 { ps:P351 . } +  OR 
+  { p:P353 { ps:P353 . } + OR 
+  . . .
+}
+
+```
+
+- Ammar is planning to work on a subset related with lipids using a ShEx like the following:
+
+```
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX :    <http://bigcat.unimaas.nl/>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd:    <http://www.wikidata.org/entity/>
+PREFIX wdt:    <http://www.wikidata.org/prop/direct/>
+
+start= @:lipids OR @:taxon
+
+:lipids {
+   wdt:P2063 .+;
+   wdt:P234 .+;
+   wdt:P235 .+;
+   wdt:P703 @:taxon +;
+}
+
+:taxon {
+	wdt:P31 [wd:Q16521];
+}
+```
+
+```
+#!/bin/sh
+Version=0.0.26
+Dump2018=wikidata-20180115-all # Local Downloaded dump from Wikidata
+
+Name=taxons
+DumpFile=${Dump2018}
+SchemaFormat=ShExC
+DumpMode=OnlyMatched
+DumpFormat=Turtle
+docker run -d -v /home/labra/dumps:/data -v /home/labra/wdsubConfig/shex:/shex -v /home/labra/generatedDumps:/generatedDumps wesogroup/wdsub:${Version} dump -o /generatedDumps/${Name}.ttl.gz -s /shex/${Name}.shex /data/${DumpFile}.json.gz --dumpFormat ${DumpFormat} --dumpMode ${DumpMode} --schemaFormat ${SchemaFormat}
+```
+
+Carolina: 
+- Create a subset based on her [ShEx] expressions ([link](https://github.com/kg-subsetting/biohackathon2022/blob/main/examples/ShEx/geneWiki.shex))
+- Review JSON structure of the subsets 
+- Once we get the subset, apply some Machine Learning algorithms for Link prediction
+- We started to run wdsub using Carolina's ShEx which contains information about GeneWiki. The shape we used was [this one](https://github.com/kg-subsetting/biohackathon2022/blob/main/examples/ShEx/geneWiki.shex)
+- [Link to some past results from Labra's students]( https://docs.google.com/document/d/1mxEo6y4IJjVpDK1nT2PvcvkFgvTCLBJax6WipTMXCUM/edit#heading=h.9ywt0nihccfc)
+
+
+### Third day: 9th-Nov-2022
+
+- Explanation about wdsub
+    -  Input JSON dumps
+    -  Output: you can choose between JSON or Turtle
+-  The dataset generated yesterday from Genewiki seems to generate only taxons...
+    -  Maybe the reason is that the JSOn output generation has some bug
+-  Ammar used the ShEx for the lipids with wdsub library and used it with the 2014...it took less than an hour
+    -  64M zipped, 492 Mb unzipped
+    -  Only contains the taxon entities...maybe the same bug?
+    -  Upload the dataset of lipids to another Zenodo
+- Andra:
+    - wdsub seems to run
+    - shape expressions with classes and identifiers...
+    - error messages
+        - somevalues/novalues are not implemented yet
+        - geocoordinates which should not be in genewiki
+        - took a long time: 
+        - 14 hours more or less
+        - 610Mb
+    - Detect problems in wikidata
+        - taxon is not a taxon but a taxon name
+        - multiple wikidata items for the same taxon
+            - problem with bacteria and viruses
+        - targeted subsets
+            - taxon subset...
+- Carolina:
+    - GeneWiki subset but seems to contain only taxons
+        - Github: https://github.com/kg-subsetting/biohackathon2022/blob/main/examples/ShEx/geneWiki.shex 
+    - Apply the subset to machine learning algorithm that she has (Case-Based reasoning).
+        - Apply her algorithm to this subset for drug repurpusing. 
+- Seyed:
+    - Checking the number of extracted outputs 
+    - WDF: Wikibase dump filter
+        - Dumpformat = JSON
+    - both tools miss some gene instances ~ 4000 instances
+    - wdsub miss 600 more
+    - List of items that are in one and not in the other
+    - Analyzing accuracy, which is important
+- Labra
+    - Created the GeneWiki subset using the GeneWiki.shex using JSON output for 2018
+    - Create the script to obtain
+        - GeneWiki of 2018 in Turtle
+        - GeneWiki of 2022 in Turtle
+        - GeneWiki of 2022 in Json
+        - Still running (more than 12 hours) 
+    - Publish in Zenodeo 
+- Possibilities to upload the datasets
+    - github repo for datasets: https://github.com/kg-subsetting/datasets-biohackathon2022 
+    -  Zenodo: already done, limit of 50G
+    -  Dryad: maybe for the latest version for the paper, because the datasets are reviewed
+    -  data.world
+        -  Examples from book: https://data.world/swwo
+    -  tryplydb ?
+- Discuss the workflow and automate the creation of subset
+    -  Wikidata Subsets as as Service
+        -  Enter a entity schema and obtain a subset
+    -  wdsub is a command line tool with docker support
+        -  Andra was able to do it in a laptop (slimbook)
+        -  We could wrap it into a web service. It would be great to have a server host as WDumper: https://wdumps.toolforge.org/dumps
+    -  Several options discussed: 
+        -  Command line
+        -  Generic web service
+        -  Pre-defined subsets: Fixed set of curated shape expressions, cron job to run that service...
+        - Wikidata + quality control 
+- Other tools apart from wdsub
+    - Ammar reminds that he created a subset for lipids using pyshex and slurper
+
+### Fourth day 10th-Nov-2022
+- Labra 
+    - Published dataset about GeneWiki in Zenodo: https://doi.org/10.5281/zenodo.7309739
+    - Waiting for the other subsets that are being generated: more than 20hours...don't know why
+    - Uploaded to a local Fuseki SPARQL endpoint the GeneWiki dataset and seems to work:
+
+```
+PREFIX ps: <https://w3id.org/payswarm#>
+prefix geo:      <http://www.opengis.net/ont/geosparql#> 
+prefix p:        <http://www.wikidata.org/prop/> 
+prefix pq:       <http://www.wikidata.org/prop/qualifier/> 
+prefix pr:       <http://www.wikidata.org/prop/reference/> 
+prefix prov:     <http://www.w3.org/ns/prov#> 
+prefix ps:       <http://www.wikidata.org/prop/statement/> 
+prefix rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> 
+prefix schema:   <http://schema.org/> 
+prefix skos:     <http://www.w3.org/2004/02/skos/core#> 
+prefix wd:       <http://www.wikidata.org/entity/> 
+prefix wdno:     <http://www.wikidata.org/prop/novalue/> 
+prefix wds:      <http://www.wikidata.org/entity/statement/> 
+prefix wdt:      <http://www.wikidata.org/prop/direct/> 
+prefix wikibase: <http://wikiba.se/ontology#> 
+prefix xsd:      <http://www.w3.org/2001/XMLSchema#> 
+
+
+SELECT * WHERE {
+  ?cellular_component wdt:P702 ?gene .
+  OPTIONAL { ?cellular_component rdfs:label ?ccLabel . }
+  OPTIONAL { ?gene rdfs:label ?geneLabel . }
+ filter(
+    lang(?ccLabel)='en' 
+    # && lang(?ccLabel)='es'
+  )
+} 
+```
+
+It obtained 365 results
+
+- Ammar
+    - Created a subset with lipids using the WholeEntity and this [Shape Expression](https://github.com/kg-subsetting/biohackathon2022/blob/main/workflows/wdsub-lipids/lipids.shex) 
+        - 1.6Gb gzipped, 8.4Gb unzipped
+        - Trying to guess if the problem is the OR in the ShEx that seems to ignore the first part...maybe update to version 0.0.29 of wdsub could solve it.
+        - We are going to create a new subset using this simplified ShEx
+        - Ammar will help publishing the Zenodo dataset in Turtle in a public SPARQL endpoint with a given IP so we can do SPARQL queries on it...
+
+- Seyed
+    - Script to count number of instance between WDF and WDSub but it didn't work
+        - Trying to check which items were extraced by one and not the other...
+        - One was created with C and the other with Blazegraph
+        - 600 items in wdf that are not in wdsub
+        - Carolina will try to help there
+- Carolina
+    - Waiting for the JSON results to analyze them using some link prediction algorithms...
+    - Started to look at processing turtle rdflib
+    - Will take a look at the differences reported by Seyed and the Python code
+    - RDF2vec library could be used for this: http://rdf2vec.org/
+    - Q. How is the embedding happening?
+        - Random walks...random visits of the nodes.
+        - Train neural network with those connections.
+        - Principal components labelled with the class.
+        - One issue could be to rewrite from wdt:P31 to rdf:type
+        - Fact validation with KG embeddings: https://ceur-ws.org/Vol-2456/paper33.pdf
+        - Semantic Answer Type prediction (ISWC 2020-2021): http://ceur-ws.org/Vol-2774/paper-05.pdf, http://ceur-ws.org/Vol-3119/paper7.pdf
+
+Ammar took the GeneWiki subset previously generated and published it a Virtuoso TripleStore with a public SPARQL endpoint. After that, we were able to create several SPARQL queries to analyse the extracted subset. 
+
+- We were discussing about the publication of the results of the biohackathon and decided the following:
+    - Publish biohackarxiv report of last year's which we had left as a draft unpublished in the next weeks
+    - Try to publish a first draft of the biohackarxiv report tomorrow.
+
+- We started a discussion about possible reproducibility pipelines
+    - Embed docker invocation in a Jupyter notebook. This option requires infrastructure to host the Jupyter notebooks.
+    - Embed a Jupyter notebook in a docker container. This is possible using [DataScience Notebook](https://hub.docker.com/r/jupyter/datascience-notebook).
+    - Another possibility could be to use a Workflow language like [SnakeMake](https://snakemake.readthedocs.io/en/stable/).
